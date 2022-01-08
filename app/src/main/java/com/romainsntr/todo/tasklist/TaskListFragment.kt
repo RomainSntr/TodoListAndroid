@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -19,9 +20,11 @@ import kotlinx.coroutines.launch
 
 class TaskListFragment : Fragment() {
 
-    private val tasksRepository = TasksRepository()
+    //private val tasksRepository = TasksRepository()
 
     val myAdapter = TaskListAdapter()
+
+    private val viewModel: TaskListViewModel by viewModels()
 
     val formLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         // ici on récupérera le résultat pour le traiter
@@ -33,17 +36,12 @@ class TaskListFragment : Fragment() {
             val oldTask = taskList.firstOrNull { it.id == task.id }
             if (oldTask != null) taskList = taskList - oldTask*/
             lifecycleScope.launch {
-                tasksRepository.createOrUpdate(task)
-                tasksRepository.refresh()
+                viewModel.addOrEdit(task)
+                //tasksRepository.createOrUpdate(task)
+                //tasksRepository.refresh()
             }
         }
     }
-
-    /*private var taskList = listOf(
-        Task(id = "id_1", title = "Task 1", description = "description 1"),
-        Task(id = "id_2", title = "Task 2"),
-        Task(id = "id_3", title = "Task 3")
-    )*/
 
     private lateinit var _binding: FragmentTaskListBinding
     private val binding get() = _binding!!
@@ -63,18 +61,13 @@ class TaskListFragment : Fragment() {
         binding.recyclerView.adapter = myAdapter
         //myAdapter.submitList(taskList)
 
-        lifecycleScope.launch {
-            tasksRepository.taskList.collect { newList ->
-                myAdapter.submitList(newList)
-            }
-        }
-
         myAdapter.onClickDelete = { task ->
             /*taskList = taskList - task
             myAdapter.submitList(taskList)*/
             lifecycleScope.launch {
-                tasksRepository.delete(task)
-                tasksRepository.refresh()
+                viewModel.delete(task)
+                //tasksRepository.delete(task)
+                //tasksRepository.refresh()
             }
         }
 
@@ -91,7 +84,7 @@ class TaskListFragment : Fragment() {
         }
 
         lifecycleScope.launch { // on lance une coroutine car `collect` est `suspend`
-            tasksRepository.taskList.collect { newList ->
+            viewModel.taskList.collect { newList: List<Task> ->
                 // cette lambda est executée à chaque fois que la liste est mise à jour dans le repository
                 // -> ici, on met à jour la liste dans l'adapteur
                 myAdapter.submitList(newList)
@@ -101,9 +94,10 @@ class TaskListFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-
+        viewModel.refresh()
+/*
         lifecycleScope.launch {
             tasksRepository.refresh() // on demande de rafraîchir les données sans attendre le retour directement
-        }
+        }*/
     }
 }
