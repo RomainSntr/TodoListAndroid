@@ -17,12 +17,17 @@ import androidx.activity.result.launch
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import coil.load
+import com.google.android.material.snackbar.Snackbar
+import com.google.modernstorage.mediastore.FileType
+import com.google.modernstorage.mediastore.MediaStoreRepository
+import com.google.modernstorage.mediastore.SharedPrimary
 import com.romainsntr.todo.R
 import com.romainsntr.todo.network.Api
 import kotlinx.coroutines.launch
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
+import java.util.*
 
 class UserInfoActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,7 +46,10 @@ class UserInfoActivity : AppCompatActivity() {
         else {
             Log.e("UserInfoActivity","Button not found")
         }
+    }
 
+    override fun onResume() {
+        super.onResume()
         val imageView = findViewById<ImageView>(R.id.image_view)
 
         lifecycleScope.launch {
@@ -66,7 +74,7 @@ class UserInfoActivity : AppCompatActivity() {
         val isExplanationNeeded = shouldShowRequestPermissionRationale(camPermission)
         when {
             isAlreadyAccepted -> launchCamera() // lancer l'action souhaitée
-                isExplanationNeeded -> showExplanation() // afficher une explication
+            isExplanationNeeded -> showExplanation() // afficher une explication
             else -> cameraPermissionLauncher.launch(camPermission) // lancer la demande de permission
         }
     }
@@ -122,4 +130,29 @@ class UserInfoActivity : AppCompatActivity() {
             body = contentResolver.openInputStream(uri)!!.readBytes().toRequestBody()
         )
     }
+
+    val mediaStore by lazy { MediaStoreRepository(this) }
+/*
+    // créer un launcher pour la caméra
+    private val cameraLauncher =
+        registerForActivityResult(ActivityResultContracts.TakePicture()) { accepted ->
+            val view = findViewById<Button>(R.id.upload_image_button)// n'importe quelle vue (ex: un bouton, binding.root, window.decorView, ...)
+                if (accepted) handleImage(photoUri)
+                else Snackbar.make(view, "Échec!", Snackbar.LENGTH_LONG).show()
+        }
+
+
+    // utiliser
+    private lateinit var photoUri: Uri
+    private fun launchCamera() {
+        lifecycleScope.launch {
+            photoUri = mediaStore.createMediaUri(
+                filename = "picture-${UUID.randomUUID()}.jpg",
+                type = FileType.IMAGE,
+                location = SharedPrimary
+            ).getOrThrow()
+            cameraLauncher.launch(photoUri)
+        }
+    }*/
+
 }
