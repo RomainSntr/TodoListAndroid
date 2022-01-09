@@ -36,15 +36,13 @@ class UserInfoActivity : AppCompatActivity() {
         setContentView(R.layout.activity_user_info)
 
         val buttonCamera = findViewById<Button>(R.id.take_picture_button)
-        if (buttonCamera != null)
-        {
-            Log.e("UserInfoActivity","Button found")
-            buttonCamera.setOnClickListener {
-                launchCameraWithPermission()
-            }
+        buttonCamera.setOnClickListener {
+            launchCameraWithPermission()
         }
-        else {
-            Log.e("UserInfoActivity","Button not found")
+
+        val buttonGallery = findViewById<Button>(R.id.upload_image_button)
+        buttonGallery.setOnClickListener {
+            galleryLauncher.launch("image/*")
         }
     }
 
@@ -61,6 +59,10 @@ class UserInfoActivity : AppCompatActivity() {
         }
     }
 
+    private val permissionAndCameraLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
+        // pour simplifier on ne fait rien ici, il faudra que le user re-clique sur le bouton
+    }
+
     private val cameraPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { accepted ->
             if (accepted) launchCamera() // lancer l'action souhaitée
@@ -69,13 +71,14 @@ class UserInfoActivity : AppCompatActivity() {
 
     private fun launchCameraWithPermission() {
         val camPermission = Manifest.permission.CAMERA
+        val storagePermission = Manifest.permission.WRITE_EXTERNAL_STORAGE
         val permissionStatus = checkSelfPermission(camPermission)
         val isAlreadyAccepted = permissionStatus == PackageManager.PERMISSION_GRANTED
         val isExplanationNeeded = shouldShowRequestPermissionRationale(camPermission)
         when {
-            isAlreadyAccepted -> launchCamera() // lancer l'action souhaitée
+            mediaStore.canWriteSharedEntries() && isAlreadyAccepted -> launchCamera() // lancer l'action souhaitée
             isExplanationNeeded -> showExplanation() // afficher une explication
-            else -> cameraPermissionLauncher.launch(camPermission) // lancer la demande de permission
+            else -> permissionAndCameraLauncher.launch(arrayOf(camPermission, storagePermission)) // lancer la demande de permission
         }
     }
 
@@ -103,24 +106,6 @@ class UserInfoActivity : AppCompatActivity() {
         lifecycleScope.launch {
             Api.userWebService.updateAvatar(convert(imageUri)).body()
         }
-
-        //imageView.setImageURI(imageUri)
-    }
-
-    private fun launchCamera() {
-        // à compléter à l'étape suivante
-        cameraLauncher.launch()
-    }
-
-    // register
-    private val cameraLauncher = registerForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
-        val tmpFile = File.createTempFile("avatar", "jpeg")
-        if (bitmap != null) {
-            tmpFile.outputStream().use {
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, it)
-            }
-        }
-        handleImage(tmpFile.toUri())
     }
 
     private fun convert(uri: Uri): MultipartBody.Part {
@@ -132,7 +117,7 @@ class UserInfoActivity : AppCompatActivity() {
     }
 
     val mediaStore by lazy { MediaStoreRepository(this) }
-/*
+
     // créer un launcher pour la caméra
     private val cameraLauncher =
         registerForActivityResult(ActivityResultContracts.TakePicture()) { accepted ->
@@ -140,7 +125,6 @@ class UserInfoActivity : AppCompatActivity() {
                 if (accepted) handleImage(photoUri)
                 else Snackbar.make(view, "Échec!", Snackbar.LENGTH_LONG).show()
         }
-
 
     // utiliser
     private lateinit var photoUri: Uri
@@ -153,6 +137,13 @@ class UserInfoActivity : AppCompatActivity() {
             ).getOrThrow()
             cameraLauncher.launch(photoUri)
         }
-    }*/
+    }
+
+    // register
+    private val galleryLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) {
+        if(it != null) {
+            handleImage(it)
+        }
+    }
 
 }
